@@ -1,0 +1,4 @@
+---
+# defaults file for check_running
+check_running_accepted_states: []
+check_running_startup_wait_retries: 60

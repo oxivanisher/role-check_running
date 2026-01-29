@@ -1,0 +1,68 @@
+---
+# tasks file for check_running
+
+- name: Gather systemd state to check for still starting system
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/systemctl
+      - is-system-running
+  failed_when: systemctl_startup_return.rc not in range(0, 127)
+  changed_when: false
+  check_mode: false
+  register: systemctl_startup_return
+
+- name: Wait or systemd state to leave initializing and starting
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/systemctl
+      - is-system-running
+  failed_when: systemctl_wait_return.rc not in range(0, 127)
+  changed_when: false
+  check_mode: false
+  register: systemctl_wait_return
+  when: systemctl_startup_return.stdout | trim in ['initializing', 'starting']
+  until: (systemctl_wait_return.stdout | trim) not in ['initializing', 'starting']
+  retries: "{{ check_running_startup_wait_retries }}"
+  delay: 5
+
+- name: Gather systemd status to be assessed
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/systemctl
+      - is-system-running
+  failed_when: systemctl_return.rc not in range(0, 127)
+  changed_when: false
+  check_mode: false
+  register: systemctl_return
+
+- name: Get failed service(s) if system is degraded
+  when: systemctl_return.stdout | trim == "degraded"
+  block:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+
+    - name: Find failed services
+      ansible.builtin.set_fact:
+        failed_services: >-
+          Failed services:
+          {{
+            ansible_facts.services
+            | dict2items
+            | selectattr('value.status', 'defined')
+            | selectattr('value.status', 'eq', 'failed')
+            | map(attribute='key')
+            | list
+            | join(', ')
+          }}
+
+- name: Assert system state
+  ansible.builtin.assert:
+    that:
+      - "systemctl_return.stdout | trim in (check_running_accepted_states | default(['running'], true))"
+    success_msg: |
+      System is in an accepted state: {{ systemctl_return.stdout | trim }}
+      Uptime: {{ (ansible_facts.uptime_seconds / 86400.0) | round(2) }} days
+    fail_msg: |
+      System is in a not accepted state: {{ systemctl_return.stdout | trim }}
+      Uptime: {{ (ansible_facts.uptime_seconds / 86400.0) | round(2) }} days
+      {{ failed_services | default('', true) }}
