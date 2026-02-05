@@ -1,6 +1,11 @@
 ---
 # tasks file for check_running
 
+- name: Sleep before doing anything
+  ansible.builtin.wait_for:
+    timeout: "{{ check_running_pre_sleep_seconds }}"
+  when: check_running_pre_sleep_seconds > 0
+
 - name: Gather systemd state to check for still starting system
   ansible.builtin.command:
     argv:

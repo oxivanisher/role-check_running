@@ -14,10 +14,11 @@ Currently none.
 Role Variables
 --------------
 
-| Name                               | Comment                                 | Default value |
-|------------------------------------|-----------------------------------------|---------------|
-| check_running_accepted_states      | Which states are additionally accepted? | `[]`          |
-| check_running_startup_wait_retries | How many 5 second retries until the role fails if the state is `initializing` or `starting`. | `60` |
+| Name                               | Comment                                                                                      | Default value |
+| ---------------------------------- | -------------------------------------------------------------------------------------------- | ------------- |
+| check_running_accepted_states      | Which states are additionally accepted?                                                      | `[]`          |
+| check_running_pre_sleep_seconds    | Sleep this many seconds before doing anything                                                | `0`           |
+| check_running_startup_wait_retries | How many 5 second retries until the role fails if the state is `initializing` or `starting`. | `60`          |
 
 **Note:** The state `running` will automatically be accepted, if `check_running_accepted_states` is empty.
 
